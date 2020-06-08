@@ -18,9 +18,6 @@ public class Calculator {
             return  numbers.stream()
                        .reduce(0,(acc,x) -> acc + x)
                       .toString();
-
-
-
     }
 
     public void setVariable(String line) throws InvalidAssignment, UnknownVariable, InvalidIdentifier {
@@ -36,15 +33,11 @@ public class Calculator {
         Matcher matcher = variablePattern.matcher(line);
         matcher.find();
         String group = matcher.group(1);
-//        if (isVariable(line))
-        {
 
-            if (matcher.end() != line.strip().length()){
+        if (matcher.end() != line.strip().length()){
                 throw new InvalidAssignment();
             }
             parseVariable(group);
-
-        }
     }
 
     public List<Integer>  parseData(String data) throws Exception {
