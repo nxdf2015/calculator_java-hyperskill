@@ -1,12 +1,13 @@
 package calculator;
 
+import java.math.BigInteger;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Calculator {
-    public Map<String,Integer> variables;
+    public Map<String,String> variables;
 
     public Calculator() {
         variables =new HashMap<>();
@@ -111,12 +112,13 @@ public class Calculator {
         String[] items = group.split("\\s*=\\s*");
 
         if(Pattern.matches("\\w+",items[0])){
-            int value;
+            String  value;
 
             if (Pattern.matches("\\d+",items[1])){
-                 value = Integer.parseInt(items[1]);
+                 value = items[1];
             }
-            else if (Pattern.matches("[a-z]+",items[1])) {
+            else
+                if (Pattern.matches("[a-z]+",items[1])) {
                 if (variables.containsKey(items[1])){
                     value = variables.get(items[1]);
                 }
@@ -133,6 +135,8 @@ public class Calculator {
         else {
             throw new InvalidAssignment();
         }
+
+
     }
 
     public List<String> toPostfix(String expression) throws InvalidExpression {
@@ -209,7 +213,10 @@ public class Calculator {
      return result;
     }
 
-    public int computePostfix(List<String> expression) throws InvalidExpression, UnknownVariable {
+
+
+    public  Integer   computePostfix(List<String> expression) throws InvalidExpression, UnknownVariable {
+
         Deque<Integer> stack = new LinkedList<>();
         int i = 0;
         while(i < expression.size()) {
@@ -219,7 +226,7 @@ public class Calculator {
 
             } else if (Pattern.matches("([a-zA-Z]+)", item)) {
                 if (variables.containsKey(item)) {
-                    stack.addLast(variables.get(item));
+                    stack.addLast(Integer.parseInt(variables.get(item)));
                 }
                 else {
                     throw new UnknownVariable();
@@ -232,22 +239,8 @@ public class Calculator {
             else {
                     int first = stack.pollLast();
                     int second = stack.pollLast();
-                    BiFunction<Integer, Integer, Integer> f = null;
-                    switch (item) {
-                        case "+":
-                            f = (x, y) -> x + y;
-                            break;
-                        case "-":
-                            f = (x, y) -> y - x;
-                            break;
-                        case "*":
-                            f = (x, y) -> x * y;
-                            break;
-                        case "/":
-                            f = (x, y) -> y / x;
-                            break;
-                    }
-                    stack.addLast(f.apply(first, second));
+                    BiFunction<Integer, Integer, Integer>  f = selectOperation(item);
+                stack.addLast(f.apply(first, second));
 
 
             }
@@ -260,15 +253,118 @@ public class Calculator {
 
     }
 
+    private  BiFunction<BigInteger, BigInteger, BigInteger> selectOperationBigInteger(String item) {
+        BiFunction<BigInteger, BigInteger, BigInteger> f = null ;
+        switch (item) {
+            case "+":
+
+                f = (x, y) -> x.add(y);
+                break;
+            case "-":
+                f = (x, y) -> y.subtract(x);
+                break;
+            case "*":
+                f = (x, y) -> x.multiply(y);
+                break;
+            case "/":
+                f = (x, y) -> y.divide(x);
+                break;
+        }
+        return f;
+    }
+
+    private BiFunction<Integer, Integer, Integer> selectOperation(String item) {
+        BiFunction<Integer, Integer, Integer> f = null ;
+        switch (item) {
+            case "+":
+
+                f = (x, y) -> x + y;
+                break;
+            case "-":
+                f = (x, y) -> y - x;
+                break;
+            case "*":
+                f = (x, y) -> x * y;
+                break;
+            case "/":
+                f = (x, y) -> y / x;
+                break;
+        }
+        return f;
+    }
+
     public  boolean isVariable(String group) {
         return group.indexOf("=") != -1;
     }
 
     public String computeExpression(String expression) throws InvalidExpression, UnknownVariable {
         List<String> postFixExpression = toPostfix(expression);
-        return ""+computePostfix(postFixExpression);
+        boolean bigInteger = false;
+        bigInteger = isBigInteger(bigInteger, variables.values()) || isBigInteger(bigInteger, postFixExpression);
+
+       if(bigInteger){
+            return computePostfixBigInteger(postFixExpression).toString();
+        }
+
+        return ""+computePostfix(postFixExpression );
 
     }
+
+    private boolean isBigInteger(boolean bigInteger, Collection<String> tokens) {
+        for (String token : tokens) {
+
+
+            if (Pattern.matches("\\d+", token)) {
+                try {
+                    Integer.parseInt(token);
+                } catch (Exception e) {
+
+                    bigInteger = true;
+                    break;
+
+                }
+            }
+        }
+        return bigInteger;
+    }
+
+    private BigInteger computePostfixBigInteger(List<String> expression) throws UnknownVariable, InvalidExpression {
+        Deque<BigInteger> stack = new LinkedList<>();
+        int i = 0;
+        while(i < expression.size()) {
+            String item = expression.get(i);
+            if (Pattern.matches("(\\d+)", item)) {
+                stack.addLast(new BigInteger(item));
+
+            } else if (Pattern.matches("([a-zA-Z]+)", item)) {
+                if (variables.containsKey(item)) {
+                    stack.addLast(new BigInteger(variables.get(item)));
+                }
+                else {
+                    throw new UnknownVariable();
+                }
+
+            }
+            else if(stack.size() < 2) {
+                throw new InvalidExpression();
+            }
+            else {
+                BigInteger first = stack.pollLast();
+                BigInteger second = stack.pollLast();
+                BiFunction<BigInteger,BigInteger,BigInteger>  f = selectOperationBigInteger(item);
+                stack.addLast(f.apply(first, second));
+
+
+            }
+            i++;
+        }
+        if (stack.size()> 1){
+            throw new InvalidExpression();
+        }
+        return stack.pollLast();
+
+    }
+
     private int getNumber(String signToken, String digitToken){
         char signReduce = reduce(signToken);
         int n = Integer.parseInt(digitToken);

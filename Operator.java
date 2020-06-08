@@ -7,6 +7,7 @@ public class Operator implements  Comparable<Operator>{
     String label;
     int precedence;
     public static Operator create(String token) throws InvalidExpression {
+
         String rt = reduceToken(token);
         switch(rt){
             case "*":
